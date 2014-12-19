@@ -647,7 +647,7 @@ instance.web_kanban.KanbanGroup = instance.web.Widget.extend({
             'limit': self.view.limit,
             'offset': self.dataset_offset += self.view.limit
         }).then(function(records) {
-            self.view.dataset.ids = self.view.dataset.ids.concat(ids);
+            self.view.dataset.ids = ids.concat(_(records).pluck('id'));
             self.do_add_records(records);
             self.compute_cards_auto_height();
             self.view.postprocess_m2m_tags();
