@@ -331,9 +331,25 @@ class res_partner(osv.osv, format_address):
         'use_parent_address': False,
         'image': False,
     }
+    
+    def _check_company(self, cr, uid, ids, context=None):
+        if context == None:
+            context = {}
+        for partner in self.browse(cr, uid, ids,  context=context):
+            if (partner.parent_id and 
+                partner.parent_id.company_id and 
+                partner.company_id and 
+                partner.company_id.id !=partner.parent_id.company_id.id):
+                return False
+            return True
 
     _constraints = [
-        (osv.osv._check_recursion, 'You cannot create recursive Partner hierarchies.', ['parent_id']),
+        (osv.osv._check_recursion, 
+            'You cannot create recursive Partner hierarchies.', 
+            ['parent_id']),
+        (_check_company, 'You cannot create or update a child customer\
+            with different company that the parent',
+            ['company_id']),
     ]
 
     def copy(self, cr, uid, id, default=None, context=None):
