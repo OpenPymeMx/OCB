@@ -38,22 +38,60 @@ class purchase_requisition(osv.osv):
         'date_start': fields.datetime('Requisition Date'),
         'date_end': fields.datetime('Requisition Deadline'),
         'user_id': fields.many2one('res.users', 'Responsible'),
-        'exclusive': fields.selection([('exclusive','Purchase Requisition (exclusive)'),('multiple','Multiple Requisitions')],'Requisition Type', required=True, help="Purchase Requisition (exclusive):  On the confirmation of a purchase order, it cancels the remaining purchase order.\nPurchase Requisition(Multiple):  It allows to have multiple purchase orders.On confirmation of a purchase order it does not cancel the remaining orders"""),
+        'exclusive': fields.selection(
+            [('exclusive','Purchase Requisition (exclusive)'),
+            ('multiple','Multiple Requisitions')],
+            'Requisition Type', 
+            required=True,
+            help="Purchase Requisition (exclusive):"  
+            "On the confirmation of a purchase order,"
+            "it cancels the remaining purchase order.\n"
+            "Purchase Requisition(Multiple):"  
+            "It allows to have multiple purchase orders." 
+            "On confirmation of a purchase order it does" 
+            "not cancel the remaining orders"
+        ),
         'description': fields.text('Description'),
         'company_id': fields.many2one('res.company', 'Company', required=True),
-        'purchase_ids' : fields.one2many('purchase.order','requisition_id','Purchase Orders',states={'done': [('readonly', True)]}),
-        'line_ids' : fields.one2many('purchase.requisition.line','requisition_id','Products to Purchase',states={'done': [('readonly', True)]}),
-        'warehouse_id': fields.many2one('stock.warehouse', 'Warehouse'),        
-        'state': fields.selection([('draft','New'),('in_progress','Sent to Suppliers'),('cancel','Cancelled'),('done','Purchase Done')],
-            'Status', track_visibility='onchange', required=True)
+        'purchase_ids' : fields.one2many(
+            'purchase.order',
+            'requisition_id',
+            'Purchase Orders',
+            states={'done': [('readonly', True)]}
+        ),
+        'line_ids' : fields.one2many(
+            'purchase.requisition.line',
+            'requisition_id',
+            'Products to Purchase',
+            states={'done': [('readonly', True)]}
+        ),
+        'warehouse_id': fields.many2one(
+            'stock.warehouse', 'Warehouse'
+        ),        
+        'state': fields.selection(
+            [('draft','New'),
+            ('in_progress','Sent to Suppliers'),
+            ('cancel','Cancelled'),
+            ('done','Purchase Done')],
+            'Status', track_visibility='onchange', required=True
+        )
     }
     _defaults = {
         'date_start': lambda *args: time.strftime('%Y-%m-%d %H:%M:%S'),
         'state': 'draft',
         'exclusive': 'multiple',
-        'company_id': lambda self, cr, uid, c: self.pool.get('res.company')._company_default_get(cr, uid, 'purchase.requisition', context=c),
-        'user_id': lambda self, cr, uid, c: self.pool.get('res.users').browse(cr, uid, uid, c).id ,
-        'name': lambda obj, cr, uid, context: obj.pool.get('ir.sequence').get(cr, uid, 'purchase.order.requisition'),
+        'company_id': lambda self, cr, uid, c: 
+            self.pool.get('res.company')._company_default_get(
+                cr, uid, 'purchase.requisition', context=c
+            ),
+        'user_id': lambda self, cr, uid, c:
+            self.pool.get('res.users').browse(
+                cr, uid, uid, c
+            ).id ,
+        'name': lambda obj, cr, uid, context: 
+            obj.pool.get('ir.sequence').get(
+                cr, uid, 'purchase.order.requisition'
+            ),
     }
 
     def copy(self, cr, uid, id, default=None, context=None):
@@ -62,9 +100,13 @@ class purchase_requisition(osv.osv):
         default.update({
             'state':'draft',
             'purchase_ids':[],
-            'name': self.pool.get('ir.sequence').get(cr, uid, 'purchase.order.requisition'),
+            'name': self.pool.get('ir.sequence').get(
+                cr, uid, 'purchase.order.requisition'
+            ),
         })
-        return super(purchase_requisition, self).copy(cr, uid, id, default, context)
+        return super(purchase_requisition, self).copy(
+            cr, uid, id, default, context
+        )
 
     def unlink(self, cr, uid, ids, context=None):
         """
@@ -72,7 +114,9 @@ class purchase_requisition(osv.osv):
         """
         if context is None: context = {}
         purchase_obj = self.pool.get('purchase.order')
-        purchase_ids = self._requisition_procurement_cancel(cr, uid, ids, context=context)
+        purchase_ids = self._requisition_procurement_cancel(
+            cr, uid, ids, context=context
+        )
         if purchase_ids:
             purchase_obj.unlink(cr, uid, purchase_ids, context=context)
         return super(purchase_requisition, self).unlink(cr, uid, ids, context=context)
@@ -167,12 +211,19 @@ class purchase_requisition(osv.osv):
         for requisition in self.browse(cr, uid, ids, context=context):
             if supplier.id in filter(lambda x: x, [rfq.state <> 'cancel' and rfq.partner_id.id or None for rfq in requisition.purchase_ids]):
                  raise osv.except_osv(_('Warning!'), _('You have already one %s purchase order for this partner, you must cancel this purchase order to create a new quotation.') % rfq.state)
+            location_id = False
+            if not requisition.warehouse_id:
+                raise osv.except_osv(
+                    _('Error'),
+                    _('It is not possible to ask ' 
+                      'a quotation without a warehouse in the purchase requisition')
+                )
             location_id = requisition.warehouse_id.lot_input_id.id
             purchase_id = purchase_order.create(cr, uid, {
                         'origin': requisition.name,
                         'partner_id': supplier.id,
                         'pricelist_id': supplier_pricelist.id,
-                        'location_id': location_id,
+                        'location_id': location_id if location_id else False,
                         'company_id': requisition.company_id.id,
                         'fiscal_position': supplier.property_account_position and supplier.property_account_position.id or False,
                         'requisition_id':requisition.id,
