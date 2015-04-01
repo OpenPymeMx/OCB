@@ -149,73 +149,181 @@ class stock_location(osv.osv):
         return result
 
     _columns = {
-        'name': fields.char('Location Name', size=64, required=True, translate=True),
-        'active': fields.boolean('Active', help="By unchecking the active field, you may hide a location without deleting it."),
-        'usage': fields.selection([('supplier', 'Supplier Location'), ('view', 'View'), ('internal', 'Internal Location'), ('customer', 'Customer Location'), ('inventory', 'Inventory'), ('procurement', 'Procurement'), ('production', 'Production'), ('transit', 'Transit Location for Inter-Companies Transfers')], 'Location Type', required=True,
-                 help="""* Supplier Location: Virtual location representing the source location for products coming from your suppliers
-                       \n* View: Virtual location used to create a hierarchical structures for your warehouse, aggregating its child locations ; can't directly contain products
-                       \n* Internal Location: Physical locations inside your own warehouses,
-                       \n* Customer Location: Virtual location representing the destination location for products sent to your customers
-                       \n* Inventory: Virtual location serving as counterpart for inventory operations used to correct stock levels (Physical inventories)
-                       \n* Procurement: Virtual location serving as temporary counterpart for procurement operations when the source (supplier or production) is not known yet. This location should be empty when the procurement scheduler has finished running.
-                       \n* Production: Virtual counterpart location for production operations: this location consumes the raw material and produces finished products
-                      """, select = True),
+        'name': fields.char(
+            'Location Name', size=64, required=True, translate=True
+        ),
+        'active': fields.boolean(
+            'Active', 
+            help="By unchecking the active field, you may hide a "
+            "location without deleting it."
+        ),
+        'usage': fields.selection(
+            [('supplier', 'Supplier Location'), ('view', 'View'), 
+             ('internal', 'Internal Location'), 
+             ('customer', 'Customer Location'), ('inventory', 'Inventory'), 
+             ('procurement', 'Procurement'), ('production', 'Production'), 
+             ('transit', 'Transit Location for Inter-Companies Transfers')
+            ], 'Location Type', required=True,
+            help="""* Supplier Location: Virtual location representing the 
+             source location for products coming from your suppliers
+            \n* View: Virtual location used to create a hierarchical
+             structures for your warehouse, aggregating its child locations ;
+             can't directly contain products
+            \n* Internal Location: Physical locations inside 
+            your own warehouses, \n* Customer Location: Virtual location 
+            representing the destination location for products sent to 
+             your customers \n* Inventory: Virtual location serving as 
+             counterpart for inventory operations used to correct stock 
+             levels (Physical inventories)\n* Procurement: Virtual location 
+             serving as temporary counterpart for procurement operations when 
+             the source (supplier or production) is not known yet. 
+             This location should be empty when the procurement scheduler 
+             has finished running.\n* Production: Virtual counterpart location 
+             for production operations: this location consumes the raw material 
+             and produces finished products
+            """, select = True
+        ),
          # temporarily removed, as it's unused: 'allocation_method': fields.selection([('fifo', 'FIFO'), ('lifo', 'LIFO'), ('nearest', 'Nearest')], 'Allocation Method', required=True),
-        'complete_name': fields.function(_complete_name, type='char', size=256, string="Location Name",
-                            store={'stock.location': (_get_sublocations, ['name', 'location_id'], 10)}),
-
-        'stock_real': fields.function(_product_value, type='float', string='Real Stock', multi="stock"),
-        'stock_virtual': fields.function(_product_value, type='float', string='Virtual Stock', multi="stock"),
-
-        'location_id': fields.many2one('stock.location', 'Parent Location', select=True, ondelete='cascade'),
-        'child_ids': fields.one2many('stock.location', 'location_id', 'Contains'),
-
-        'chained_journal_id': fields.many2one('stock.journal', 'Chaining Journal',help="Inventory Journal in which the chained move will be written, if the Chaining Type is not Transparent (no journal is used if left empty)"),
+        'complete_name': fields.function(
+            _complete_name, type='char', size=256, string="Location Name",
+            store={
+                'stock.location': (
+                    _get_sublocations, ['name', 'location_id'], 10
+                )
+            }
+        ),
+        'stock_real': fields.function(
+            _product_value, type='float', string='Real Stock', 
+            multi="stock"
+        ),
+        'stock_virtual': fields.function(
+            _product_value, type='float', string='Virtual Stock', 
+            multi="stock"
+        ),
+        'location_id': fields.many2one(
+            'stock.location', 'Parent Location', 
+            select=True, ondelete='cascade'
+        ),
+        'child_ids': fields.one2many(
+            'stock.location', 'location_id', 'Contains'
+        ),
+        'chained_journal_id': fields.many2one(
+            'stock.journal', 'Chaining Journal',
+            help="Inventory Journal in which the chained move will be "
+            "written, if the Chaining Type is not Transparent "
+            "(no journal is used if left empty)"
+        ),
         'chained_location_id': fields.many2one('stock.location', 'Chained Location If Fixed'),
-        'chained_location_type': fields.selection([('none', 'None'), ('customer', 'Customer'), ('fixed', 'Fixed Location')],
+        'chained_location_type': fields.selection(
+            [('none', 'None'), ('customer', 'Customer'), 
+            ('fixed', 'Fixed Location')],
             'Chained Location Type', required=True,
-            help="Determines whether this location is chained to another location, i.e. any incoming product in this location \n" \
-                "should next go to the chained location. The chained location is determined according to the type :"\
-                "\n* None: No chaining at all"\
-                "\n* Customer: The chained location will be taken from the Customer Location field on the Partner form of the Partner that is specified in the Picking list of the incoming products." \
-                "\n* Fixed Location: The chained location is taken from the next field: Chained Location if Fixed." \
-                ),
+            help="Determines whether this location is chained to another "
+            "location, i.e. any incoming product in this location \n" 
+            "should next go to the chained location. The chained "
+            "location is determined according to the type :"
+            "\n* None: No chaining at all"
+            "\n* Customer: The chained location will be taken from "
+            "the Customer Location field on the Partner form of the "
+            "Partner that is specified in the Picking list of the "
+            "incoming products."
+            "\n* Fixed Location: The chained location is taken from "
+            "the next field: Chained Location if Fixed." 
+        ),
         'chained_auto_packing': fields.selection(
-            [('auto', 'Automatic Move'), ('manual', 'Manual Operation'), ('transparent', 'Automatic No Step Added')],
+            [('auto', 'Automatic Move'), ('manual', 'Manual Operation'), 
+            ('transparent', 'Automatic No Step Added')],
             'Chaining Type',
             required=True,
-            help="This is used only if you select a chained location type.\n" \
-                "The 'Automatic Move' value will create a stock move after the current one that will be "\
-                "validated automatically. With 'Manual Operation', the stock move has to be validated "\
-                "by a worker. With 'Automatic No Step Added', the location is replaced in the original move."
+            help="This is used only if you select a chained location type.\n" 
+                "The 'Automatic Move' value will create a stock move after the " 
+                "current one that will be "
+                "validated automatically. With 'Manual Operation', the stock "
+                "move has to be validated "
+                "by a worker. With 'Automatic No Step Added', the location is "
+                "replaced in the original move."
             ),
-        'chained_picking_type': fields.selection([('out', 'Sending Goods'), ('in', 'Getting Goods'), ('internal', 'Internal')], 'Shipping Type', help="Shipping Type of the Picking List that will contain the chained move (leave empty to automatically detect the type based on the source and destination locations)."),
-        'chained_company_id': fields.many2one('res.company', 'Chained Company', help='The company the Picking List containing the chained move will belong to (leave empty to use the default company determination rules'),
-        'chained_delay': fields.integer('Chaining Lead Time',help="Delay between original move and chained move in days"),
-        'partner_id': fields.many2one('res.partner', 'Location Address',help="Address of  customer or supplier."),
-        'icon': fields.selection(tools.icons, 'Icon', size=64,help="Icon show in  hierarchical tree view"),
-
+        'chained_picking_type': fields.selection(
+            [('out', 'Sending Goods'), 
+             ('in', 'Getting Goods'), 
+             ('internal', 'Internal')], 'Shipping Type', 
+            help="Shipping Type of the Picking List that will contain the " 
+            "chained move (leave empty to automatically detect the type based " 
+            "on the source and destination locations)."
+        ),
+        'chained_company_id': fields.many2one(
+            'res.company', 'Chained Company', 
+            help='The company the Picking List containing the chained move ' 
+            'will belong to (leave empty to use the default company '
+            'determination rules'
+        ),
+        'chained_delay': fields.integer(
+            'Chaining Lead Time',
+            help="Delay between original move and chained move in days"
+        ),
+        'partner_id': fields.many2one(
+            'res.partner', 'Location Address', 
+            help="Address of  customer or supplier."
+        ),
+        'icon': fields.selection(
+            tools.icons, 'Icon', size=64,
+            help="Icon show in  hierarchical tree view"
+        ),
         'comment': fields.text('Additional Information'),
-        'posx': fields.integer('Corridor (X)',help="Optional localization details, for information purpose only"),
-        'posy': fields.integer('Shelves (Y)', help="Optional localization details, for information purpose only"),
-        'posz': fields.integer('Height (Z)', help="Optional localization details, for information purpose only"),
-
+        'posx': fields.integer(
+            'Corridor (X)',
+            help="Optional localization details, for information purpose only"
+        ),
+        'posy': fields.integer(
+            'Shelves (Y)', help="Optional localization details, for " 
+            "information purpose only"
+        ),
+        'posz': fields.integer(
+            'Height (Z)', help="Optional localization details, for "
+            "information purpose only"
+        ),
         'parent_left': fields.integer('Left Parent', select=1),
         'parent_right': fields.integer('Right Parent', select=1),
-        'stock_real_value': fields.function(_product_value, type='float', string='Real Stock Value', multi="stock", digits_compute=dp.get_precision('Account')),
-        'stock_virtual_value': fields.function(_product_value, type='float', string='Virtual Stock Value', multi="stock", digits_compute=dp.get_precision('Account')),
-        'company_id': fields.many2one('res.company', 'Company', select=1, help='Let this field empty if this location is shared between all companies'),
-        'scrap_location': fields.boolean('Scrap Location', help='Check this box to allow using this location to put scrapped/damaged goods.'),
-        'valuation_in_account_id': fields.many2one('account.account', 'Stock Valuation Account (Incoming)', domain = [('type','=','other')],
-                                                   help="Used for real-time inventory valuation. When set on a virtual location (non internal type), "
-                                                        "this account will be used to hold the value of products being moved from an internal location "
-                                                        "into this location, instead of the generic Stock Output Account set on the product. "
-                                                        "This has no effect for internal locations."),
-        'valuation_out_account_id': fields.many2one('account.account', 'Stock Valuation Account (Outgoing)', domain = [('type','=','other')],
-                                                   help="Used for real-time inventory valuation. When set on a virtual location (non internal type), "
-                                                        "this account will be used to hold the value of products being moved out of this location "
-                                                        "and into an internal location, instead of the generic Stock Output Account set on the product. "
-                                                        "This has no effect for internal locations."),
+        'stock_real_value': fields.function(
+            _product_value, type='float', string='Real Stock Value', 
+            multi="stock", digits_compute=dp.get_precision('Account')
+        ),
+        'stock_virtual_value': fields.function(
+            _product_value, type='float', string='Virtual Stock Value', 
+            multi="stock", digits_compute=dp.get_precision('Account')
+        ),
+        'company_id': fields.many2one(
+            'res.company', 'Company', select=1,
+            help='Let this field empty if this location is shared '
+            'between all companies'
+        ),
+        'scrap_location': fields.boolean(
+            'Scrap Location', 
+            help='Check this box to allow using this location to put '
+            'scrapped/damaged goods.'
+        ),
+        'valuation_in_account_id': fields.many2one(
+            'account.account', 'Stock Valuation Account (Incoming)', 
+            domain = [('type','=','other')],
+            help="Used for real-time inventory valuation. When set on a "
+            "virtual location (non internal type), "
+            "this account will be used to hold the value of products being "
+            "moved from an internal location "
+            "into this location, instead of the generic Stock Output Account "
+            "set on the product. "
+            "This has no effect for internal locations."
+        ),
+        'valuation_out_account_id': fields.many2one(
+            'account.account', 'Stock Valuation Account (Outgoing)', 
+            domain = [('type','=','other')],
+            help="Used for real-time inventory valuation. When set on a "
+            "virtual location (non internal type), "
+            "this account will be used to hold the value of products "
+            "being moved out of this location "
+            "and into an internal location, instead of the generic Stock "
+            "Output Account set on the product. "
+            "This has no effect for internal locations."
+        ),
     }
     _defaults = {
         'active': True,
@@ -648,17 +756,75 @@ class stock_picking(osv.osv):
         return new_id
 
     _columns = {
-        'name': fields.char('Reference', size=64, select=True, states={'done':[('readonly', True)], 'cancel':[('readonly',True)]}),
-        'origin': fields.char('Source Document', size=64, states={'done':[('readonly', True)], 'cancel':[('readonly',True)]}, help="Reference of the document", select=True),
-        'backorder_id': fields.many2one('stock.picking', 'Back Order of', states={'done':[('readonly', True)], 'cancel':[('readonly',True)]}, help="If this shipment was split, then this field links to the shipment which contains the already processed part.", select=True),
-        'type': fields.selection([('out', 'Sending Goods'), ('in', 'Getting Goods'), ('internal', 'Internal')], 'Shipping Type', required=True, select=True, help="Shipping type specify, goods coming in or going out."),
-        'note': fields.text('Notes', states={'done':[('readonly', True)], 'cancel':[('readonly',True)]}),
-        'stock_journal_id': fields.many2one('stock.journal','Stock Journal', select=True, states={'done':[('readonly', True)], 'cancel':[('readonly',True)]}),
-        'location_id': fields.many2one('stock.location', 'Location', states={'done':[('readonly', True)], 'cancel':[('readonly',True)]}, help="Keep empty if you produce at the location where the finished products are needed." \
-                "Set a location if you produce at a fixed location. This can be a partner location " \
-                "if you subcontract the manufacturing operations.", select=True),
-        'location_dest_id': fields.many2one('stock.location', 'Dest. Location', states={'done':[('readonly', True)], 'cancel':[('readonly',True)]}, help="Location where the system will stock the finished products.", select=True),
-        'move_type': fields.selection([('direct', 'Partial'), ('one', 'All at once')], 'Delivery Method', required=True, states={'done':[('readonly', True)], 'cancel':[('readonly',True)]}, help="It specifies goods to be deliver partially or all at once"),
+        'name': fields.char(
+            'Reference', size=64, select=True, 
+            states={
+                'done':[('readonly', True)], 'cancel':[('readonly',True)]
+            }
+        ),
+        'origin': fields.char(
+            'Source Document', size=64, 
+            states={
+                'done':[('readonly', True)], 'cancel':[('readonly',True)]
+            }, 
+            help="Reference of the document", select=True
+        ),
+        'backorder_id': fields.many2one(
+            'stock.picking', 'Back Order of', 
+            states={
+                'done':[('readonly', True)], 'cancel':[('readonly',True)]
+            }, 
+            help="If this shipment was split, then this field links to "
+            "the shipment which contains the already processed part.", 
+            select=True
+        ),
+        'type': fields.selection(
+            [('out', 'Sending Goods'), ('in', 'Getting Goods'), 
+             ('internal', 'Internal')], 
+            'Shipping Type', 
+            required=True, select=True, 
+            help="Shipping type specify, goods coming in or going out."
+        ),
+        'note': fields.text(
+            'Notes', 
+            states={
+                'done':[('readonly', True)], 'cancel':[('readonly',True)]
+            }
+        ),
+        'stock_journal_id': fields.many2one(
+            'stock.journal','Stock Journal', select=True, 
+            states={
+                'done':[('readonly', True)], 'cancel':[('readonly',True)]
+            }
+        ),
+        'location_id': fields.many2one(
+            'stock.location', 'Location', 
+            states={
+                'done':[('readonly', True)], 'cancel':[('readonly',True)]
+            }, 
+            help="Keep empty if you produce at the location where the "
+            "finished products are needed." 
+            "Set a location if you produce at a fixed location. "
+            "This can be a partner location " 
+            "if you subcontract the manufacturing operations.", 
+            select=True
+        ),
+        'location_dest_id': fields.many2one(
+            'stock.location', 'Dest. Location', 
+            states={
+                'done':[('readonly', True)], 'cancel':[('readonly',True)]
+            }, 
+            help="Location where the system will stock the finished products.",
+            select=True
+        ),
+        'move_type': fields.selection(
+            [('direct', 'Partial'), ('one', 'All at once')],
+            'Delivery Method', required=True, 
+            states={
+                'done':[('readonly', True)], 'cancel':[('readonly',True)]
+            }, 
+            help="It specifies goods to be deliver partially or all at once"
+        ),
         'state': fields.selection([
             ('draft', 'Draft'),
             ('cancel', 'Cancelled'),
@@ -668,7 +834,8 @@ class stock_picking(osv.osv):
             ('done', 'Transferred'),
             ], 'Status', readonly=True, select=True, track_visibility='onchange', help="""
             * Draft: not confirmed yet and will not be scheduled until confirmed\n
-            * Waiting Another Operation: waiting for another move to proceed before it becomes automatically available (e.g. in Make-To-Order flows)\n
+            * Waiting Another Operation: waiting for another move to proceed before 
+            it becomes automatically available (e.g. in Make-To-Order flows)\n
             * Waiting Availability: still waiting for the availability of products\n
             * Ready to Transfer: products reserved, simply waiting for confirmation.\n
             * Transferred: has been processed, can't be modified or cancelled anymore\n
@@ -678,31 +845,53 @@ class stock_picking(osv.osv):
             get_min_max_date,
             fnct_inv=_set_minimum_date, multi='min_max_date',
             store={
-                'stock.move': (
-                    _get_stock_move_changes,
-                    ['date_expected'], 10,
-                )
+                'stock.move': (_get_stock_move_changes,['date_expected'], 10,)
             },
             type='datetime', string='Scheduled Time', select=True,
             help="Scheduled time for the shipment to be processed"
         ),
-        'date': fields.datetime('Creation Date', help="Creation date, usually the time of the order.", select=True, states={'done':[('readonly', True)], 'cancel':[('readonly',True)]}),
-        'date_done': fields.datetime('Date of Transfer', help="Date of Completion", states={'done':[('readonly', True)], 'cancel':[('readonly',True)]}),
+        'date': fields.datetime(
+            'Creation Date', select=True,
+            help="Creation date, usually the time of the order.",  
+            states={
+                'done':[('readonly', True)], 'cancel':[('readonly',True)]
+            }
+        ),
+        'date_done': fields.datetime(
+            'Date of Transfer', help="Date of Completion", 
+            states={
+                'done':[('readonly', True)], 'cancel':[('readonly',True)]
+            }
+        ),
         'max_date': fields.function(
-            get_min_max_date,
-            fnct_inv=_set_maximum_date, multi='min_max_date',
+            get_min_max_date, fnct_inv=_set_maximum_date, multi='min_max_date',
             store={
-                'stock.move': (
-                    _get_stock_move_changes,
-                    ['date_expected'], 10,
-                )
+                'stock.move': (_get_stock_move_changes,['date_expected'], 10,)
             },
             type='datetime', string='Max. Expected Date', select=True
         ),
-        'move_lines': fields.one2many('stock.move', 'picking_id', 'Internal Moves', states={'done': [('readonly', True)], 'cancel': [('readonly', True)]}),
-        'product_id': fields.related('move_lines', 'product_id', type='many2one', relation='product.product', string='Product'),
-        'auto_picking': fields.boolean('Auto-Picking', states={'done':[('readonly', True)], 'cancel':[('readonly',True)]}),
-        'partner_id': fields.many2one('res.partner', 'Partner', states={'done':[('readonly', True)], 'cancel':[('readonly',True)]}),
+        'move_lines': fields.one2many(
+            'stock.move', 'picking_id', 'Internal Moves', 
+            states={
+                'done': [('readonly', True)], 'cancel': [('readonly', True)]
+            }
+        ),
+        'product_id': fields.related(
+            'move_lines', 'product_id', type='many2one', 
+            relation='product.product', string='Product'
+        ),
+        'auto_picking': fields.boolean(
+            'Auto-Picking', 
+            states={
+                'done':[('readonly', True)], 'cancel':[('readonly',True)]
+            }
+        ),
+        'partner_id': fields.many2one(
+            'res.partner', 'Partner', 
+            states={
+                'done':[('readonly', True)], 'cancel':[('readonly',True)]
+            }
+        ),
         'invoice_state': fields.selection([
             ("invoiced", "Invoiced"),
             ("2binvoiced", "To Be Invoiced"),
