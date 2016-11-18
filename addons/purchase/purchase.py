@@ -1018,8 +1018,8 @@ class purchase_order_line(osv.osv):
             dummy, name = product_product.name_get(cr, uid, product_id, context=context_partner)[0]
             if product.description_purchase:
                 desciption = ir_translation._get_source(
-                    cr, uid, None, 'model', lang, 
-                    product.description_purchase
+                    cr, uid, 'description_purchase', 'model',
+                    lang, product.description_purchase
                 )
                 name += '\n' + desciption
             res['value'].update({'name': name})
@@ -1248,7 +1248,7 @@ class procurement_order(osv.osv):
 
             name = product.partner_ref
             if product.description_purchase:
-                name += '\n'+ product.description_purchase
+                name += '\n' + product.description_purchase
             line_vals = {
                 'name': name,
                 'product_qty': qty,
