@@ -96,6 +96,7 @@ class hr_payslip(osv.osv):
             default_partner_id = slip.employee_id.address_home_id.id
             name = _('Payslip of %s') % (slip.employee_id.name)
             move = {
+                'name': slip.number,
                 'narration': name,
                 'date': timenow,
                 'ref': slip.number,
@@ -115,7 +116,7 @@ class hr_payslip(osv.osv):
                     debit_line = (0, 0, {
                     'name': line.name,
                     'date': timenow,
-                    'partner_id': (line.salary_rule_id.register_id.partner_id or line.salary_rule_id.account_debit.type in ('receivable', 'payable')) and partner_id or False,
+                    'partner_id': partner_id or False,
                     'account_id': debit_account_id,
                     'journal_id': slip.journal_id.id,
                     'period_id': period_id,
@@ -133,7 +134,7 @@ class hr_payslip(osv.osv):
                     credit_line = (0, 0, {
                     'name': line.name,
                     'date': timenow,
-                    'partner_id': (line.salary_rule_id.register_id.partner_id or line.salary_rule_id.account_credit.type in ('receivable', 'payable')) and partner_id or False,
+                    'partner_id': partner_id or False,
                     'account_id': credit_account_id,
                     'journal_id': slip.journal_id.id,
                     'period_id': period_id,
